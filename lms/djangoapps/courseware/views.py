@@ -6,13 +6,13 @@ import logging
 import urllib
 import json
 import cgi
-
 from datetime import datetime
 from collections import defaultdict
+from markupsafe import escape
+
 from django.utils import translation
 from django.utils.translation import ugettext as _
 from django.utils.translation import ungettext
-
 from django.conf import settings
 from django.core.context_processors import csrf
 from django.core.exceptions import PermissionDenied
@@ -23,13 +23,19 @@ from django.utils.timezone import UTC
 from django.views.decorators.http import require_GET
 from django.http import Http404, HttpResponse
 from django.shortcuts import redirect
-from edxmako.shortcuts import render_to_response, render_to_string, marketing_link
-from django_future.csrf import ensure_csrf_cookie
 from django.views.decorators.cache import cache_control
 from django.db import transaction
-from functools import wraps
-from markupsafe import escape
+from xblock.fragment import Fragment
+from xmodule.modulestore.django import modulestore
+from xmodule.modulestore.exceptions import ItemNotFoundError, NoPathToItem
+from xmodule.modulestore.search import path_to_location
+from xmodule.tabs import CourseTabList, StaffGradingTab, PeerGradingTab, OpenEndedGradingTab
+from xmodule.x_module import STUDENT_VIEW
+from opaque_keys import InvalidKeyError
+from opaque_keys.edx.locations import SlashSeparatedCourseKey
 
+from edxmako.shortcuts import render_to_response, render_to_string, marketing_link
+from django_future.csrf import ensure_csrf_cookie
 from courseware import grades
 from courseware.access import has_access, _adjust_start_date_for_beta_testers
 from courseware.courses import get_courses, get_course, get_studio_url, get_course_with_access, sort_by_announcement
@@ -38,32 +44,21 @@ from courseware.model_data import FieldDataCache
 from .module_render import toc_for_course, get_module_for_descriptor, get_module
 from courseware.models import StudentModule, StudentModuleHistory
 from course_modes.models import CourseMode
-
 from open_ended_grading import open_ended_notifications
 from student.models import UserTestGroup, CourseEnrollment
 from student.views import single_course_reverification_info, is_course_blocked
 from util.cache import cache, cache_if_anonymous
-from xblock.fragment import Fragment
-from xmodule.modulestore.django import modulestore
-from xmodule.modulestore.exceptions import ItemNotFoundError, NoPathToItem
-from xmodule.modulestore.search import path_to_location
-from xmodule.tabs import CourseTabList, StaffGradingTab, PeerGradingTab, OpenEndedGradingTab
-from xmodule.x_module import STUDENT_VIEW
 import shoppingcart
 from shoppingcart.models import CourseRegistrationCode
 from shoppingcart.utils import is_shopping_cart_enabled
-from opaque_keys import InvalidKeyError
-
 from microsite_configuration import microsite
-from opaque_keys.edx.locations import SlashSeparatedCourseKey
 from instructor.enrollment import uses_shib
-
 from util.db import commit_on_success_with_read_committed
-
 import survey.utils
 import survey.views
-
 from util.views import ensure_valid_course_key
+
+
 log = logging.getLogger("edx.courseware")
 
 template_imports = {'urllib': urllib}
@@ -952,7 +947,7 @@ def _progress(request, course_key, student_id):
     grade_summary = grades.grade(student, request, course)
 
     if courseware_summary is None:
-        #This means the student didn't have access to the course (which the instructor requested)
+        # This means the student didn't have access to the course (which the instructor requested)
         raise Http404
 
     context = {
@@ -991,23 +986,23 @@ def get_static_tab_contents(request, course, tab, wrap_xmodule_display=True):
     """
     Returns the contents for the given static tab
     """
-    loc = course.id.make_usage_key(
+    locator = course.id.make_usage_key(
         tab.type,
         tab.url_slug,
     )
     field_data_cache = FieldDataCache.cache_for_descriptor_descendents(
-        course.id, request.user, modulestore().get_item(loc), depth=0
+        course.id, request.user, modulestore().get_item(locator), depth=0
     )
     tab_module = get_module(
         request.user,
         request,
-        loc,
+        locator,
         field_data_cache,
         static_asset_path=course.static_asset_path,
         wrap_xmodule_display=wrap_xmodule_display
     )
 
-    logging.debug('course_module = {0}'.format(tab_module))
+    logging.debug('course_module = %s', tab_module)
 
     html = ''
     if tab_module is not None:

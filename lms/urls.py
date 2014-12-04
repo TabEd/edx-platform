@@ -95,7 +95,7 @@ urlpatterns += (
 # OPEN EDX SERVER API
 if settings.FEATURES["SERVER_API"]:
     urlpatterns += (
-        url(r'^api/server/', include('server_api.urls')),
+        url(r'^api/server/', include('server_api.urls', namespace='server_api')),
     )
 
 # OPEN EDX USER API
