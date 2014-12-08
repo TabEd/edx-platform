@@ -1469,7 +1469,8 @@ class MongoModuleStore(ModuleStoreDraftAndPublished, ModuleStoreWriteBase, Mongo
             course_key (CourseKey): course identifier
 
         Returns:
-            Asset info for the course
+            Dict with (at least) an '_id' key, identifying the relevant Mongo doc. If asset metadata
+            exists, other keys will be the other asset types with values as lists of asset metadata.
         """
         # Using the course_key, find or insert the course asset metadata document.
         # A single document exists per course to store the course asset metadata.

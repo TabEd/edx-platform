@@ -340,14 +340,17 @@ class ModuleStoreAssetInterface(object):
         mdata.from_storable(all_assets[asset_idx])
         return mdata
 
-    @contract(course_key='CourseKey', start='int | None', maxresults='int | None', sort='tuple(str,(int,>=1,<=2))|None',)
+    @contract(
+        course_key='CourseKey', asset_type='None | basestring',
+        start='int | None', maxresults='int | None', sort='tuple(str,(int,>=1,<=2))|None'
+    )
     def get_all_asset_metadata(self, course_key, asset_type, start=0, maxresults=-1, sort=None, **kwargs):
         """
         Returns a list of asset metadata for all assets of the given asset_type in the course.
 
         Args:
             course_key (CourseKey): course identifier
-            asset_type (str): the block_type of the assets to return
+            asset_type (str): the block_type of the assets to return. If None, return assets of all types.
             start (int): optional - start at this asset number. Zero-based!
             maxresults (int): optional - return at most this many, -1 means no limit
             sort (array): optional - None means no sort
@@ -373,7 +376,17 @@ class ModuleStoreAssetInterface(object):
             if sort[1] == ModuleStoreEnum.SortOrder.descending:
                 sort_order = ModuleStoreEnum.SortOrder.descending
 
-        all_assets = SortedListWithKey(course_assets.get(asset_type, []), key=key_func)
+        if asset_type is None:
+            # Add assets of all types to the sorted list.
+            all_assets = SortedListWithKey([], key=key_func)
+            for asset_type in course_assets.iterkeys():
+                # '_id' is sometimes added to the course_assets for CRUD purposes
+                # (depending on the modulestore). If it's present, skip it.
+                if asset_type != '_id':
+                    all_assets.update(course_assets[asset_type])
+        else:
+            # Add assets of a single type to the sorted list.
+            all_assets = SortedListWithKey(course_assets.get(asset_type, []), key=key_func)
         num_assets = len(all_assets)
 
         start_idx = start
@@ -392,7 +405,8 @@ class ModuleStoreAssetInterface(object):
         ret_assets = []
         for idx in xrange(start_idx, end_idx, step_incr):
             raw_asset = all_assets[idx]
-            new_asset = AssetMetadata(course_key.make_asset_key(asset_type, raw_asset['filename']))
+            asset_key = course_key.make_asset_key(raw_asset['asset_type'], raw_asset['filename'])
+            new_asset = AssetMetadata(asset_key)
             new_asset.from_storable(raw_asset)
             ret_assets.append(new_asset)
         return ret_assets

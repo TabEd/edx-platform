@@ -26,7 +26,7 @@ class AssetStoreTestData(object):
     user_email = "me@example.com"
 
     asset_fields = (
-        'filename', 'internal_name', 'pathname', 'locked',
+        AssetMetadata.ASSET_BASENAME_ATTR, 'internal_name', 'pathname', 'locked',
         'edited_by', 'edited_by_email', 'edited_on', 'created_by', 'created_by_email', 'created_on',
         'curr_version', 'prev_version'
     )
@@ -358,6 +358,36 @@ class TestMongoAssetMetadataStorage(unittest.TestCase):
                 self.assertIsNotNone(store.find_asset_metadata(asset_key))
                 unknown_asset_key = course.id.make_asset_key('different', 'nosuchfile.jpg')
                 self.assertIsNone(store.find_asset_metadata(unknown_asset_key))
+
+    @ddt.data(*MODULESTORE_SETUPS)
+    def test_get_multiple_types(self, storebuilder):
+        """
+        getting all things which are of type other than 'asset'
+        """
+        with MongoContentstoreBuilder().build() as contentstore:
+            with storebuilder.build(contentstore) as store:
+                course = CourseFactory.create(modulestore=store)
+                for asset_type, filename in (
+                    ('different', 'burn.jpg'),
+                    ('vrml', 'ponte_vecchio.vrml'),
+                    ('vrml', 'olympus_mons.vrml'),
+                    ('asset', 'puppy.png')
+                ):
+                    asset_key = course.id.make_asset_key(asset_type, filename)
+                    new_asset = self._make_asset_thumbnail_metadata(
+                        self._make_asset_metadata(asset_key)
+                    )
+                    store.save_asset_metadata(new_asset, ModuleStoreEnum.UserID.test)
+
+                self.assertEquals(len(store.get_all_asset_metadata(course.id, 'different')), 1)
+                self.assertEquals(len(store.get_all_asset_metadata(course.id, 'vrml')), 2)
+                self.assertEquals(len(store.get_all_asset_metadata(course.id, 'asset')), 1)
+                self.assertEquals(len(store.get_all_asset_metadata(course.id, 'not_here')), 0)
+                self.assertEquals(len(store.get_all_asset_metadata(course.id, None)), 4)
+                self.assertEquals(len(store.get_all_asset_metadata(
+                    course.id, None, start=0, maxresults=-1,
+                    sort=('displayname', ModuleStoreEnum.SortOrder.ascending))), 4
+                )
 
     @ddt.data(*MODULESTORE_SETUPS)
     def test_delete_all_different_type(self, storebuilder):
