@@ -172,8 +172,14 @@ from django.utils.translation import ugettext as _
               }
       )
       .success(function(data) {
-                  location.reload(true);
-              })
+        if (data.coupon_code_applied) {
+          location.reload(true); // Reload the page if the coupon code was applied.
+        }
+        else {
+          // Redirect to the redemption URL if the Registration code was applied.
+          location.href = data.redemption_url;
+        }
+      })
       .error(function(data,status) {
                   if(status=="parsererror"){
                        location.reload(true);
@@ -216,6 +222,14 @@ from django.utils.translation import ugettext as _
    });
 
    $("input[name='billing-details']").click(function(event){
+       // check if there is code exists in the inout_code field
+       // before going to billing details page
+       // if exists then trigger click event of the apply code button
+       var code = $('div.code-input input#input_code').val();
+       if (code!= ''){
+          $('div.code-input #submit-code').trigger('click');
+          return false;
+       }
        event.preventDefault();
        location.href = "${reverse('shoppingcart.views.billing_details')}";
    });
