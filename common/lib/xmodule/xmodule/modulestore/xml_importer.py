@@ -382,16 +382,17 @@ def _import_course_asset_metadata(store, data_dir, course_id, raise_on_failure):
             return
 
     # Now add all asset metadata to the modulestore.
-    for asset in all_assets:
-        # Using edited_by for this import will be incorrect when moving courses between edX instances.
-        # The user ID will likely refer to another user entirely.
-        store.save_asset_metadata(asset, asset.edited_by)
+    if len(all_assets) > 0:
+        store.save_asset_metadata_list(all_assets, all_assets[0].edited_by, import_only=True)
 
 
 def _import_course_module(
         store, runtime, user_id, data_dir, course_key, dest_course_id, source_course, do_import_static,
         verbose,
 ):
+    """
+    Import a course module.
+    """
     if verbose:
         log.debug("Scanning {0} for course module...".format(course_key))
 

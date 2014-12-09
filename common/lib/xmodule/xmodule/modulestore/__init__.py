@@ -418,13 +418,29 @@ class ModuleStoreAssetWriteInterface(ModuleStoreAssetInterface):
     The write operations for assets and asset metadata
     """
     @contract(asset_metadata='AssetMetadata')
-    def save_asset_metadata(self, asset_metadata, user_id):
+    def save_asset_metadata(self, asset_metadata, user_id, import_only):
         """
         Saves the asset metadata for a particular course's asset.
 
         Arguments:
-            asset_metadata (AssetMetadata): data about the course asset data (must have asset_id
-            set)
+            asset_metadata (AssetMetadata): data about the course asset data
+            user_id (int): user ID saving the asset metadata
+            import_only (bool): True if importing without editing, False if editing
+
+        Returns:
+            True if metadata save was successful, else False
+        """
+        raise NotImplementedError()
+
+    @contract(asset_metadata_list='list(AssetMetadata)')
+    def save_asset_metadata_list(self, asset_metadata_list, user_id, import_only):
+        """
+        Saves a list of asset metadata for a particular course's asset.
+
+        Arguments:
+            asset_metadata (AssetMetadata): data about the course asset data
+            user_id (int): user ID saving the asset metadata
+            import_only (bool): True if importing without editing, False if editing
 
         Returns:
             True if metadata save was successful, else False
@@ -452,6 +468,7 @@ class ModuleStoreAssetWriteInterface(ModuleStoreAssetInterface):
             asset_key (AssetKey): asset identifier
             attr (str): which attribute to set
             value: the value to set it to (any type pymongo accepts such as datetime, number, string)
+            user_id (int): user ID saving the asset metadata
 
         Raises:
             ItemNotFoundError if no such item exists
@@ -470,6 +487,7 @@ class ModuleStoreAssetWriteInterface(ModuleStoreAssetInterface):
         Arguments:
             source_course_key (CourseKey): identifier of course to copy from
             dest_course_key (CourseKey): identifier of course to copy to
+            user_id (int): user ID copying the asset metadata
         """
         pass
 
