@@ -178,7 +178,7 @@ class ModuleRenderTestCase(ModuleStoreTestCase, LoginEnrollmentTestCase):
 
     def test_missing_position_handler(self):
         """
-        Test that sending POST request without position argument don't raise KeyError
+        Test that sending POST request without or invalid position argument don't raise server error
         """
         self.client.login(username=self.mock_user.username, password="test")
         dispatch_url = reverse(
@@ -191,6 +191,14 @@ class ModuleRenderTestCase(ModuleStoreTestCase, LoginEnrollmentTestCase):
             ]
         )
         response = self.client.post(dispatch_url)
+        self.assertEqual(200, response.status_code)
+        self.assertEqual(json.loads(response.content), {'success': True})
+
+        response = self.client.post(dispatch_url, {'position': ''})
+        self.assertEqual(200, response.status_code)
+        self.assertEqual(json.loads(response.content), {'success': True})
+
+        response = self.client.post(dispatch_url, {'position': "''"})
         self.assertEqual(200, response.status_code)
         self.assertEqual(json.loads(response.content), {'success': True})
 
