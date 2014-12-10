@@ -178,7 +178,8 @@ class XmlDescriptor(XModuleDescriptor):
             # Add info about where we are, but keep the traceback
             msg = 'Unable to load file contents at path %s for item %s: %s ' % (
                 filepath, def_id, err)
-            raise Exception, msg, sys.exc_info()[2]
+            err.msg = msg
+            raise
 
     @classmethod
     def load_definition(cls, xml_object, system, def_id):
