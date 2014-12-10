@@ -22,11 +22,11 @@ from track.views import task_track
 from courseware.grades import iterate_grades_for
 from courseware.models import StudentModule
 from courseware.model_data import FieldDataCache
-from courseware.module_render import get_module_for_descriptor_internal
+from courseware.module_render import get_module_for_descriptor_internal, LmsModuleSystem
 from instructor_analytics.basic import enrolled_students_features
 from instructor_analytics.csvs import format_dictlist
 from instructor_task.models import ReportStore, InstructorTask, PROGRESS
-from student.models import CourseEnrollment
+from student.models import CourseEnrollment, user_by_anonymous_id
 
 # define different loggers for use within tasks and on client side
 TASK_LOG = get_task_logger(__name__)
@@ -523,6 +523,9 @@ def upload_csv_to_report_store(rows, csv_name, course_id, timestamp):
     )
 
 
+# def _get_student_group():
+
+
 def upload_grades_csv(_xmodule_instance_args, _entry_id, course_id, _task_input, action_name):
     """
     For a given `course_id`, generate a grades CSV file for all students that
@@ -542,7 +545,28 @@ def upload_grades_csv(_xmodule_instance_args, _entry_id, course_id, _task_input,
     enrolled_students = CourseEnrollment.users_enrolled_in(course_id)
     task_progress = TaskProgress(action_name, enrolled_students.count(), start_time)
 
+    # import pdb; pdb.set_trace()
+
+    # We only need this for PartitionService
+    system = LmsModuleSystem(
+        static_url='/static',
+        course_id=course_id,
+        track_function=None,
+        get_module=None,
+        render_template=None,
+        replace_urls=None,
+        descriptor_runtime=None,)
+
+    partition_service = system._services['partitions']
+    group_config_names = [partition.name for partition in partition_service.course_partitions]
+
+    # TODO! Get cohorts
+    cohorts_heading = []
+
+    # descriptor = modulestore().get_course(course_id)
+
     # Loop over all our students and build our CSV lists in memory
+    partition_names = []
     header = None
     rows = []
     err_rows = [["id", "username", "error_msg"]]
@@ -555,17 +579,36 @@ def upload_grades_csv(_xmodule_instance_args, _entry_id, course_id, _task_input,
 
         if gradeset:
             # We were able to successfully grade this student for this course.
+
+            # instance = _get_module_instance_for_task(
+            #     course_id, student, descriptor, _xmodule_instance_args, action_name
+            # )
+            #
+            # partition_service = instance.xmodule_runtime._services['partitions']
+            # groups = []
+            # for partition in partition_service.course_partitions:
+            #     user_group_id = partition_service.get_user_group_id_for_partition(partition.id)
+            #     groups.append(partition.get_group(user_group_id).name)
+
             task_progress.succeeded += 1
             if not header:
                 # Encode the header row in utf-8 encoding in case there are unicode characters
                 header = [section['label'].encode('utf-8') for section in gradeset[u'section_breakdown']]
-                rows.append(["id", "email", "username", "grade"] + header)
+                rows.append(["id", "email", "username", "grade"] + header + cohorts_heading + group_config_names)
 
             percents = {
                 section['label']: section.get('percent', 0.0)
                 for section in gradeset[u'section_breakdown']
                 if 'label' in section
             }
+
+            # Get student group(s)
+            groups = []
+            for partition in partition_service.course_partitions:
+                groups.append(partition_service.get_user_group(student, partition).name)
+
+            # TODO! Get student cohort
+            cohorts_value = []
 
             # Not everybody has the same gradable items. If the item is not
             # found in the user's gradeset, just assume it's a 0. The aggregated
@@ -574,7 +617,8 @@ def upload_grades_csv(_xmodule_instance_args, _entry_id, course_id, _task_input,
             # possible for a student to have a 0.0 show up in their row but
             # still have 100% for the course.
             row_percents = [percents.get(label, 0.0) for label in header]
-            rows.append([student.id, student.email, student.username, gradeset['percent']] + row_percents)
+            rows.append([student.id, student.email, student.username, gradeset['percent']] + row_percents +
+                        cohorts_value + groups)
         else:
             # An empty gradeset means we failed to grade a student.
             task_progress.failed += 1
