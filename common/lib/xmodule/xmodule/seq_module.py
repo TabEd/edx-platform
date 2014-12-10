@@ -88,7 +88,7 @@ class SequenceModule(SequenceFields, XModule):
     def handle_ajax(self, dispatch, data):  # TODO: bounds checking
         ''' get = request.POST instance '''
         if dispatch == 'goto_position':
-            self.position = int(data['position'])
+            self.position = int(data.get('position', 1))
             return json.dumps({'success': True})
         raise NotFoundError('Unexpected dispatch type')
 
