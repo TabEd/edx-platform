@@ -360,17 +360,9 @@
     <aside class="content-supplementary" role="complementary">
       <div class="bit">
         <h3 class="title title-3">${_('New to Studio?')}</h3>
-        <p>${_('Click Help in the upper-right corner to get more information about the Studio page you are viewing. You can also use the links at the bottom of the page to access our continously updated documentation and other Studio resources.')}</p>
-
-        <ol class="list-actions">
-          <li class="action-item">
-
-            <a href="${get_online_help_info(online_help_token())['doc_url']}" target="_blank">${_("Getting Started with Studio")}</a>
-          </li>
-          <li class="action-item">
-            <a href="http://help.edge.edx.org/discussion/new" class="show-tender" title="${_("Use our feedback tool, Tender, to request help")}">${_("Request help with Studio")}</a>
-          </li>
-        </ol>
+        <p>
+        Talk to anand.arora@gmail.com
+        </p>
       </div>
 
       % if course_creator_status=='disallowed_for_this_site' and settings.FEATURES.get('STUDIO_REQUEST_EMAIL',''):
